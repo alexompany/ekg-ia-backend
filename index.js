@@ -5,46 +5,59 @@ require('dotenv').config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // 🛡️ Por si la imagen es grande
 
 const PORT = process.env.PORT || 3000;
 
 app.post('/completions', async (req, res) => {
-  const { messages } = req.body;
-  if (!messages) {
-    return res.status(400).json({ error: 'Faltan mensajes en la solicitud.' });
+  const { image_base64 } = req.body;
+
+  if (!image_base64) {
+    return res.status(400).json({ error: 'Falta la imagen en base64' });
   }
+
+  const payload = {
+    model: "gpt-4-vision-preview",
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:image/jpeg;base64,${image_base64}`
+            }
+          },
+          {
+            type: "text",
+            text: "Actúa como cardiólogo experto. Evalúa esta imagen de EKG según criterios clínicos actualizados. Indica el diagnóstico con máximo una línea de comentario."
+          }
+        ]
+      }
+    ],
+    max_tokens: 500
+  };
 
   try {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-3.5-turbo',
-        messages,
-        temperature: 0.3,
-        max_tokens: 500,
-      },
+      payload,
       {
         headers: {
           Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+        }
       }
     );
 
-    if (response.data && response.data.choices && response.data.choices.length > 0) {
-      // 🚀 Solo enviamos el contenido limpio para Flutter
-      res.json({
-        content: response.data.choices[0].message.content
-      });
-    } else {
-      res.status(500).json({ error: 'Respuesta inválida de OpenAI.' });
-    }
+    const content = response.data.choices[0].message.content;
+    res.json({ content });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error al consultar OpenAI:', error.message);
+    res.status(500).json({ error: 'Error al procesar la imagen.' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor funcionando en puerto ${PORT}`);
+  console.log(`Servidor GPT-4 Vision activo en puerto ${PORT}`);
 });
