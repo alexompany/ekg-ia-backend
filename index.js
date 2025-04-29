@@ -33,7 +33,10 @@ app.post('/completions', async (req, res) => {
     );
 
     if (response.data && response.data.choices && response.data.choices.length > 0) {
-      res.json(response.data);
+      // 🚀 Solo enviamos el contenido limpio para Flutter
+      res.json({
+        content: response.data.choices[0].message.content
+      });
     } else {
       res.status(500).json({ error: 'Respuesta inválida de OpenAI.' });
     }
@@ -45,4 +48,3 @@ app.post('/completions', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor funcionando en puerto ${PORT}`);
 });
-
