@@ -11,6 +11,10 @@ const PORT = process.env.PORT || 3000;
 
 app.post('/completions', async (req, res) => {
   const { messages } = req.body;
+  if (!messages) {
+    return res.status(400).json({ error: 'Faltan mensajes en la solicitud.' });
+  }
+
   try {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
@@ -28,7 +32,11 @@ app.post('/completions', async (req, res) => {
       }
     );
 
-    res.json(response.data);
+    if (response.data && response.data.choices && response.data.choices.length > 0) {
+      res.json(response.data);
+    } else {
+      res.status(500).json({ error: 'Respuesta inválida de OpenAI.' });
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -37,3 +45,4 @@ app.post('/completions', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor funcionando en puerto ${PORT}`);
 });
+
