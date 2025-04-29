@@ -5,7 +5,7 @@ require('dotenv').config();
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // 🛡️ Por si la imagen es grande
+app.use(express.json({ limit: '10mb' })); // 🚀 Permitir imágenes grandes
 
 const PORT = process.env.PORT || 3000;
 
@@ -30,7 +30,7 @@ app.post('/completions', async (req, res) => {
           },
           {
             type: "text",
-            text: "Actúa como cardiólogo experto. Evalúa esta imagen de EKG según criterios clínicos actualizados. Indica el diagnóstico con máximo una línea de comentario."
+            text: "Actúa como cardiólogo experto. Evalúa este EKG capturado en la imagen según guías internacionales. Diagnóstico breve y claro, máximo dos líneas. No expliques términos."
           }
         ]
       }
@@ -50,14 +50,26 @@ app.post('/completions', async (req, res) => {
       }
     );
 
-    const content = response.data.choices[0].message.content;
-    res.json({ content });
+    if (response.data && response.data.choices && response.data.choices.length > 0) {
+      const content = response.data.choices[0].message.content;
+      res.json({ content });
+    } else {
+      res.status(500).json({ error: 'Respuesta inválida de OpenAI' });
+    }
   } catch (error) {
-    console.error('Error al consultar OpenAI:', error.message);
-    res.status(500).json({ error: 'Error al procesar la imagen.' });
+    console.error('Error al consultar OpenAI:', error.response?.data || error.message);
+
+    if (error.response) {
+      // OpenAI respondió con error
+      res.status(error.response.status).json({ error: error.response.data });
+    } else {
+      // Otro tipo de error
+      res.status(500).json({ error: 'Error desconocido al procesar la imagen.' });
+    }
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor GPT-4 Vision activo en puerto ${PORT}`);
+  console.log(`🚀 Servidor activo en puerto ${PORT} y listo para GPT-4 Vision`);
 });
+
